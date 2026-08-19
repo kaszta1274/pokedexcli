@@ -5,7 +5,16 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/kaszta1274/pokedexcli/internal/pokeapi"
 )
+
+type config struct {
+	commands map[string]cliCommand
+	client   *pokeapi.Client
+	Next     *string
+	Previous *string
+}
 
 func startRepl(cfg *config) {
 	reader := bufio.NewScanner(os.Stdin)

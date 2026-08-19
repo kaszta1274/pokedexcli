@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
+
+	"github.com/kaszta1274/pokedexcli/internal/pokecache"
 )
 
 type LocationAreas struct {
@@ -19,11 +22,13 @@ type LocationAreas struct {
 
 type Client struct {
 	baseURL string
+	cache   *pokecache.Cache
 }
 
 func NewClient() *Client {
 	return &Client{
 		baseURL: "https://pokeapi.co/api/v2/location-area/",
+		cache:   pokecache.NewCache(time.Hour),
 	}
 }
 
@@ -33,23 +38,47 @@ func (c *Client) GetMap(url *string) (LocationAreas, error) {
 		reqURL = *url
 	}
 
-	res, err := http.Get(reqURL)
+	if cachedBytes, exists := c.cache.Get(reqURL); exists {
+		locationAreas, err := parseLocationAreas(cachedBytes)
+		if err != nil {
+			return LocationAreas{}, err
+		}
+
+		return locationAreas, nil
+	}
+
+	responseBody, err := c.getBody(reqURL)
 	if err != nil {
 		return LocationAreas{}, err
+	}
+
+	c.cache.Add(reqURL, responseBody)
+
+	return parseLocationAreas(responseBody)
+}
+
+func (c *Client) getBody(url string) ([]byte, error) {
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	responseBody, err := io.ReadAll(res.Body)
 	if err != nil {
-		return LocationAreas{}, err
+		return nil, err
 	}
 
 	if res.StatusCode > 299 {
-		return LocationAreas{}, fmt.Errorf("response failed with status code %d: %s\n", res.StatusCode, responseBody)
+		return nil, fmt.Errorf("response failed with status code %d: %s\n", res.StatusCode, responseBody)
 	}
 
+	return responseBody, nil
+}
+
+func parseLocationAreas(cachedBytes []byte) (LocationAreas, error) {
 	var locationAreas LocationAreas
-	if err = json.Unmarshal(responseBody, &locationAreas); err != nil {
+	if err := json.Unmarshal(cachedBytes, &locationAreas); err != nil {
 		return LocationAreas{}, err
 	}
 
