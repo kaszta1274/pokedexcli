@@ -1,7 +1,6 @@
 package pokeapi
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,16 +9,6 @@ import (
 	"github.com/kaszta1274/pokedexcli/internal/pokecache"
 )
 
-type LocationAreas struct {
-	Count    int     `json:"count"`
-	Next     *string `json:"next"`
-	Previous *string `json:"previous"`
-	Results  []struct {
-		Name string `json:"name"`
-		URL  string `json:"url"`
-	} `json:"results"`
-}
-
 type Client struct {
 	baseURL string
 	cache   *pokecache.Cache
@@ -27,34 +16,56 @@ type Client struct {
 
 func NewClient() *Client {
 	return &Client{
-		baseURL: "https://pokeapi.co/api/v2/location-area/",
-		cache:   pokecache.NewCache(time.Hour),
+		baseURL: "https://pokeapi.co/api/v2/",
+		cache:   pokecache.NewCache(5 * time.Minute),
 	}
 }
 
-func (c *Client) GetMap(url *string) (LocationAreas, error) {
-	reqURL := c.baseURL
-	if url != nil {
-		reqURL = *url
+func (c *Client) GetLocations(pageURL *string) (RespShallowLocations, error) {
+	reqURL := c.baseURL + "location-area/"
+	if pageURL != nil {
+		reqURL = *pageURL
 	}
 
 	if cachedBytes, exists := c.cache.Get(reqURL); exists {
-		locationAreas, err := parseLocationAreas(cachedBytes)
+		locationsResp, err := parseRespShallowLocations(cachedBytes)
 		if err != nil {
-			return LocationAreas{}, err
+			return RespShallowLocations{}, err
 		}
 
-		return locationAreas, nil
+		return locationsResp, nil
 	}
 
 	responseBody, err := c.getBody(reqURL)
 	if err != nil {
-		return LocationAreas{}, err
+		return RespShallowLocations{}, err
 	}
 
 	c.cache.Add(reqURL, responseBody)
 
-	return parseLocationAreas(responseBody)
+	return parseRespShallowLocations(responseBody)
+}
+
+func (c *Client) GetLocationDetails(locationName string) (RespDetailedLocation, error) {
+	reqURL := c.baseURL + "location-area/" + locationName
+
+	if cachedBytes, exists := c.cache.Get(reqURL); exists {
+		detailedLocationResponse, err := parseRespDetailedLocation(cachedBytes)
+		if err != nil {
+			return RespDetailedLocation{}, err
+		}
+
+		return detailedLocationResponse, nil
+	}
+
+	responseBody, err := c.getBody(reqURL)
+	if err != nil {
+		return RespDetailedLocation{}, err
+	}
+
+	c.cache.Add(reqURL, responseBody)
+
+	return parseRespDetailedLocation(responseBody)
 }
 
 func (c *Client) getBody(url string) ([]byte, error) {
@@ -74,13 +85,4 @@ func (c *Client) getBody(url string) ([]byte, error) {
 	}
 
 	return responseBody, nil
-}
-
-func parseLocationAreas(cachedBytes []byte) (LocationAreas, error) {
-	var locationAreas LocationAreas
-	if err := json.Unmarshal(cachedBytes, &locationAreas); err != nil {
-		return LocationAreas{}, err
-	}
-
-	return locationAreas, nil
 }

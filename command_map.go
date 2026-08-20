@@ -4,39 +4,39 @@ import (
 	"fmt"
 )
 
-func commandMap(cfg *config) error {
-	locationAreas, err := cfg.client.GetMap(cfg.Next)
+func commandMap(cfg *config, arguments []string) error {
+	locationsResp, err := cfg.client.GetLocations(cfg.Next)
 	if err != nil {
 		return err
 	}
 
-	for _, area := range locationAreas.Results {
+	for _, area := range locationsResp.Results {
 		fmt.Println(area.Name)
 	}
 
-	cfg.Previous = locationAreas.Previous
-	cfg.Next = locationAreas.Next
+	cfg.Previous = locationsResp.Previous
+	cfg.Next = locationsResp.Next
 
 	return nil
 }
 
-func commandMapBack(cfg *config) error {
+func commandMapBack(cfg *config, arguments []string) error {
 	if cfg.Previous == nil {
 		fmt.Println("you're on the first page")
 		return nil
 	}
 
-	locationAreas, err := cfg.client.GetMap(cfg.Previous)
+	locationsResp, err := cfg.client.GetLocations(cfg.Previous)
 	if err != nil {
 		return err
 	}
 
-	for _, area := range locationAreas.Results {
+	for _, area := range locationsResp.Results {
 		fmt.Println(area.Name)
 	}
 
-	cfg.Previous = locationAreas.Previous
-	cfg.Next = locationAreas.Next
+	cfg.Previous = locationsResp.Previous
+	cfg.Next = locationsResp.Next
 
 	return nil
 }
