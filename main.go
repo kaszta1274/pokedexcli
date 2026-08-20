@@ -8,6 +8,7 @@ func main() {
 	cfg := config{
 		commands: getCommands(),
 		client:   pokeapi.NewClient(),
+		pokedex:  make(map[string]pokeapi.Pokemon),
 	}
 	startRepl(&cfg)
 }

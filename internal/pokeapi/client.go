@@ -68,6 +68,17 @@ func (c *Client) GetLocationDetails(locationName string) (RespDetailedLocation, 
 	return parseRespDetailedLocation(responseBody)
 }
 
+func (c *Client) GetPokemon(pokemonName string) (Pokemon, error) {
+	reqURL := c.baseURL + "pokemon/" + pokemonName
+
+	responseBody, err := c.getBody(reqURL)
+	if err != nil {
+		return Pokemon{}, err
+	}
+
+	return parsePokemon(responseBody)
+}
+
 func (c *Client) getBody(url string) ([]byte, error) {
 	res, err := http.Get(url)
 	if err != nil {
